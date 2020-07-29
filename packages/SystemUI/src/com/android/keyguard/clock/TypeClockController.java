@@ -64,6 +64,11 @@ public class TypeClockController implements ClockPlugin {
     private TypographicClock mBigClockView;
 
     /**
+     * Controller for transition into dark state.
+     */
+    private CrossFadeDarkController mDarkController;
+
+    /**
      * Create a TypeClockController instance.
      *
      * @param res Resources contains title and thumbnail.
@@ -89,6 +94,7 @@ public class TypeClockController implements ClockPlugin {
         mView = null;
         mBigClockView = null;
         mTypeClock = null;
+        mDarkController = null;
     }
 
     @Override
@@ -161,6 +167,13 @@ public class TypeClockController implements ClockPlugin {
     @Override
     public void onTimeTick() {
         mTypeClock.onTimeChanged();
+    }
+
+    @Override
+    public void setDarkAmount(float darkAmount) {
+        if (mDarkController != null) {
+            mDarkController.setDarkAmount(darkAmount);
+        }
     }
 
     @Override

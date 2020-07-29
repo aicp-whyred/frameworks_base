@@ -55,6 +55,15 @@ public class TypeClockAltController implements ClockPlugin {
     private final SysuiColorExtractor mColorExtractor;
 
     /**
+     * Computes preferred position of clock.
+     */
+    private float mDarkAmount;
+    private final int mStatusBarHeight;
+    private final int mKeyguardLockPadding;
+    private final int mKeyguardLockHeight;
+    private final int mBurnInOffsetY;
+
+    /**
      * Renders preview from clock view.
      */
     private final ViewPreviewer mRenderer = new ViewPreviewer();
@@ -64,7 +73,16 @@ public class TypeClockAltController implements ClockPlugin {
      */
     private View mView;
     private TypographicClock mTypeClock;
-    private TypographicClock mBigClockView;
+
+    /**
+     * Small clock shown on lock screen above stack scroller.
+     */
+    private TypographicClock mLockClock;
+
+    /**
+     * Controller for transition into dark state.
+     */
+    private CrossFadeDarkController mDarkController;
 
     /**
      * Create a TypeClockAltController instance.
@@ -78,20 +96,30 @@ public class TypeClockAltController implements ClockPlugin {
         mResources = res;
         mLayoutInflater = inflater;
         mColorExtractor = colorExtractor;
+        mStatusBarHeight = res.getDimensionPixelSize(R.dimen.status_bar_height);
+        mKeyguardLockPadding = res.getDimensionPixelSize(R.dimen.keyguard_lock_padding);
+        mKeyguardLockHeight = res.getDimensionPixelSize(R.dimen.keyguard_lock_height);
+        mBurnInOffsetY = res.getDimensionPixelSize(R.dimen.burn_in_prevention_offset_y);
     }
 
     private void createViews() {
         mView = mLayoutInflater.inflate(R.layout.type_clock_alt, null);
+        mTypeClock = mView.findViewById(R.id.type_clock);
 
-        mBigClockView  = (TypographicClock) mLayoutInflater.inflate(R.layout.typographic_clock_alt, null);
-        mTypeClock = mBigClockView.findViewById(R.id.type_clock);
+        // For now, this view is used to hide the default digital clock.
+        // Need better transition to lock screen.
+        mLockClock = (TypographicClock) mLayoutInflater.inflate(R.layout.typographic_clock_alt, null);
+        mLockClock.setVisibility(View.GONE);
+
+        mDarkController = new CrossFadeDarkController(mView, mLockClock);
     }
 
     @Override
     public void onDestroyView() {
         mView = null;
-        mBigClockView = null;
         mTypeClock = null;
+        mLockClock = null;
+        mDarkController = null;
     }
 
     @Override
@@ -128,23 +156,28 @@ public class TypeClockAltController implements ClockPlugin {
 
     @Override
     public View getView() {
-        if (mBigClockView == null) {
+        if (mLockClock == null) {
             createViews();
         }
-        return mBigClockView;
+        return mLockClock;
     }
 
     @Override
     public View getBigClockView() {
-        if (mBigClockView == null) {
+        if (mView == null) {
             createViews();
         }
-        return mBigClockView;
+        return mView;
     }
 
     @Override
     public int getPreferredY(int totalHeight) {
-        return totalHeight / 2;
+        // On AOD, clock needs to appear below the status bar with enough room for pixel shifting
+        int aodY = mStatusBarHeight + mKeyguardLockHeight + 2 * mKeyguardLockPadding
+                + mBurnInOffsetY + mTypeClock.getHeight() + (mTypeClock.getHeight() / 2);
+        // On lock screen, clock needs to appear below the lock icon
+        int lockY =  mStatusBarHeight + mKeyguardLockHeight + 2 * mKeyguardLockPadding + (mTypeClock.getHeight() / 2);
+        return (int) MathUtils.lerp(lockY, aodY, mDarkAmount);
     }
 
     @Override
@@ -153,6 +186,7 @@ public class TypeClockAltController implements ClockPlugin {
     @Override
     public void setTextColor(int color) {
         mTypeClock.setTextColor(color);
+        mLockClock.setTextColor(color);
     }
 
     @Override
@@ -162,16 +196,27 @@ public class TypeClockAltController implements ClockPlugin {
         }
         final int color = colorPalette[Math.max(0, colorPalette.length - 5)];
         mTypeClock.setClockColor(color);
+        mLockClock.setClockColor(color);
     }
 
     @Override
     public void onTimeTick() {
         mTypeClock.onTimeChanged();
+        mLockClock.onTimeChanged();
+    }
+
+    @Override
+    public void setDarkAmount(float darkAmount) {
+        mDarkAmount = darkAmount;
+        if (mDarkController != null) {
+            mDarkController.setDarkAmount(darkAmount);
+        }
     }
 
     @Override
     public void onTimeZoneChanged(TimeZone timeZone) {
         mTypeClock.onTimeZoneChanged(timeZone);
+        mLockClock.onTimeZoneChanged(timeZone);
     }
 
     @Override
