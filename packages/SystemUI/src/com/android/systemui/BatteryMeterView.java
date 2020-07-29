@@ -95,7 +95,7 @@ public class BatteryMeterView extends LinearLayout implements
     private int mTextColor;
     private int mLevel;
     private int mShowPercentMode = MODE_DEFAULT;
-    private boolean mForceShowPercent = false;
+    private boolean mForceShowPercent;
     private boolean mShowPercentAvailable;
     private boolean mShowBatteryImage;
     // Some places may need to show the battery conditionally, and not obey the tuner
@@ -590,6 +590,8 @@ public class BatteryMeterView extends LinearLayout implements
                 BatteryMeterDrawableBase.BATTERY_STYLE_Q : Integer.parseInt(styleStr);
         mDrawable.setMeterStyle(style);
 
+        mForceShowPercent = false;
+
         switch (style) {
             case BatteryMeterDrawableBase.BATTERY_STYLE_TEXT:
                 if (mBatteryIconView != null) {
@@ -637,10 +639,5 @@ public class BatteryMeterView extends LinearLayout implements
 
     private int getMeterStyle() {
         return mDrawable.getMeterStyle();
-    }
-
-    public void setQsbHeader() {
-        mForceShowPercent = true;
-        updateBatteryStyle("" + BatteryMeterDrawableBase.BATTERY_STYLE_Q);
     }
 }
