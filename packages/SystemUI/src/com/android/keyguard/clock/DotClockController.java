@@ -50,6 +50,11 @@ public class DotClockController implements ClockPlugin {
     private final SysuiColorExtractor mColorExtractor;
 
     /**
+     * Computes preferred position of clock.
+     */
+    private final SmallClockPosition mClockPosition;
+
+    /**
      * Renders preview from clock view.
      */
     private final ViewPreviewer mRenderer = new ViewPreviewer();
@@ -59,6 +64,12 @@ public class DotClockController implements ClockPlugin {
      */
     private ClockLayout mBigClockView;
     private ImageClock mDotClock;
+
+    /**
+     * Small clock shown on lock screen above stack scroller.
+     */
+    private View mView;
+    private TextClock mLockClock;
 
     /**
      * Helper to extract colors from wallpaper palette for clock face.
@@ -77,17 +88,23 @@ public class DotClockController implements ClockPlugin {
         mResources = res;
         mLayoutInflater = inflater;
         mColorExtractor = colorExtractor;
+        mClockPosition = new SmallClockPosition(res);
     }
 
     private void createViews() {
         mBigClockView = (ClockLayout) mLayoutInflater.inflate(R.layout.dot_clock, null);
-        mDotClock = mBigClockView.findViewById(R.id.dot_clock);
+        mDotClock = mBigClockView.findViewById(R.id.analog_clock);
+
+        mView = mLayoutInflater.inflate(R.layout.digital_clock, null);
+        mLockClock = mView.findViewById(R.id.lock_screen_clock);
     }
 
     @Override
     public void onDestroyView() {
         mBigClockView = null;
         mDotClock = null;
+        mView = null;
+        mLockClock = null;
     }
 
     @Override
@@ -124,7 +141,10 @@ public class DotClockController implements ClockPlugin {
 
     @Override
     public View getView() {
-        return null;
+        if (mView == null) {
+            createViews();
+        }
+        return mView;
     }
 
     @Override
@@ -137,8 +157,11 @@ public class DotClockController implements ClockPlugin {
 
     @Override
     public int getPreferredY(int totalHeight) {
-        return totalHeight / 2;
+        return mClockPosition.getPreferredY();
     }
+
+    @Override
+    public void setStyle(Style style) {}
 
     @Override
     public void setTextColor(int color) {
@@ -154,17 +177,21 @@ public class DotClockController implements ClockPlugin {
     private void updateColor() {
         final int primary = mPalette.getPrimaryColor();
         final int secondary = mPalette.getSecondaryColor();
+        mLockClock.setTextColor(secondary);
+        //mDotClock.setClockColors(primary, secondary);
     }
 
     @Override
     public void onTimeTick() {
         mDotClock.onTimeChanged();
         mBigClockView.onTimeChanged();
+        mLockClock.refresh();
     }
 
     @Override
     public void setDarkAmount(float darkAmount) {
         mPalette.setDarkAmount(darkAmount);
+        mClockPosition.setDarkAmount(darkAmount);
         mBigClockView.setDarkAmount(darkAmount);
     }
 
